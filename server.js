@@ -3,8 +3,9 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const path = require('path');
-const db = require('./database');
+const { initDatabase } = require('./database');
 
+let db = null;
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'mbti-admin-2024'; // 管理后台令牌，部署时修改
@@ -374,9 +375,11 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// 启动服务
-app.listen(PORT, () => {
-  console.log(`
+// 启动服务（等待数据库初始化完成）
+initDatabase().then(initializedDb => {
+  db = initializedDb;
+  app.listen(PORT, () => {
+    console.log(`
 ╔══════════════════════════════════════════════╗
 ║   MBTI心智阶位测评系统已启动                  ║
 ║                                              ║
@@ -386,5 +389,9 @@ app.listen(PORT, () => {
 ║   管理员令牌: ${ADMIN_TOKEN}   ║
 ║   默认账号: admin / admin123                  ║
 ╚══════════════════════════════════════════════╝
-  `);
+    `);
+  });
+}).catch(err => {
+  console.error('数据库初始化失败:', err);
+  process.exit(1);
 });
